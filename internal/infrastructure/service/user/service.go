@@ -25,3 +25,17 @@ func (s *Service) User(ctx context.Context, filter service.UserFilter) (*models.
 		Username: filter.Username,
 	})
 }
+
+func (s *Service) Register(ctx context.Context, username string, password string) (*models.User, error) {
+	user, err := models.NewUser(username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err = s.userRepository.Add(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}

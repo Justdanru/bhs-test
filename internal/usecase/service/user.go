@@ -14,4 +14,5 @@ type UserFilter struct {
 
 type UserService interface {
 	User(ctx context.Context, filter UserFilter) (*models.User, error)
+	Register(ctx context.Context, username string, password string) (*models.User, error)
 }

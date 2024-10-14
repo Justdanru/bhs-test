@@ -14,4 +14,5 @@ type GetFilter struct {
 
 type UserRepository interface {
 	Get(ctx context.Context, filter GetFilter) (*models.User, error)
+	Add(ctx context.Context, user *models.User) (*models.User, error)
 }
