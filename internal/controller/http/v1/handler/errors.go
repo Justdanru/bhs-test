@@ -56,11 +56,25 @@ func (h *ErrorsHandler) responseError(w http.ResponseWriter, err error) {
 			"errors://user-not-found",
 			http.StatusNotFound,
 		)
+	case errors.Is(err, repository.ErrUsernameAlreadyTaken):
+		h.responseProblemJSON(
+			w,
+			"Username already taken",
+			"errors://username-already-taken",
+			http.StatusBadRequest,
+		)
 	case errors.Is(err, apimodels.ErrUserIdNotPassed):
 		h.responseProblemJSON(
 			w,
 			"User id not passed in URL",
 			"errors://user-id-not-passed-in-url",
+			http.StatusBadRequest,
+		)
+	case errors.Is(err, apimodels.ErrWrongUserIdFormat):
+		h.responseProblemJSON(
+			w,
+			"Wronh format of user ID",
+			"errors://wrong-user-id-format",
 			http.StatusBadRequest,
 		)
 	default:

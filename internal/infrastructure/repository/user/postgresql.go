@@ -80,6 +80,42 @@ func (r *RepositoryPostgreSQL) Get(ctx context.Context, filter repository.GetFil
 	return models.BuildUser(id, username, passwordHash), nil
 }
 
+func (r *RepositoryPostgreSQL) Add(ctx context.Context, user *models.User) (*models.User, error) {
+	logger, err := ctxlogger.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.With(slog.Group(
+		"added_user",
+		slog.String("username", user.Username()),
+	))
+
+	var id uint64
+
+	err = squirrel.Insert("users").
+		Columns("username", "password_hash").
+		Values(user.Username(), user.PasswordHash()).
+		PlaceholderFormat(squirrel.Dollar).
+		Suffix("RETURNING id").
+		RunWith(r.sql).
+		QueryRowContext(ctx).
+		Scan(&id)
+	if err != nil {
+		logger.Error("couldn't add new user", "error", err)
+
+		if isDuplicateEntryError(err) {
+			return nil, repository.ErrUsernameAlreadyTaken
+		}
+
+		return nil, err
+	}
+
+	user.SetId(id)
+
+	return user, nil
+}
+
 func isDuplicateEntryError(err error) bool {
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) {

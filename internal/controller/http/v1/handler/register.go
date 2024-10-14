@@ -6,56 +6,57 @@ import (
 	"github.com/Justdanru/bhs-test/internal/controller/http/v1/models"
 	"github.com/Justdanru/bhs-test/internal/usecase/service"
 	ctxlogger "github.com/Justdanru/bhs-test/pkg/context/logger"
-	"github.com/gorilla/mux"
+	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 )
 
-type UserHandler struct {
+type RegisterHandler struct {
 	*ErrorsHandler
 	userService service.UserService
 }
 
-func NewUserHandler(
+func NewRegisterHandler(
 	errorsHandler *ErrorsHandler,
 	userService service.UserService,
-) *UserHandler {
-	return &UserHandler{
+) *RegisterHandler {
+	return &RegisterHandler{
 		ErrorsHandler: errorsHandler,
 		userService:   userService,
 	}
 }
 
-type UserResponse struct {
+type RegisterRequest struct {
+	UserCredentials *models.UserCredentials `json:"credentials,required"`
+}
+
+type RegisterResponse struct {
 	User *models.User `json:"user,required"`
 }
 
-func (h *UserHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
+func (h *RegisterHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	logger, err := ctxlogger.FromContext(r.Context())
 	if err != nil {
 		h.responseError(w, err)
 		return
 	}
 
-	if _, ok := vars["user_id"]; !ok {
-		logger.Error("couldn't fetch user_id from URL", "error", models.ErrUserIdNotPassed)
-		h.responseError(w, models.ErrUserIdNotPassed)
-		return
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Error("error while reading request body", "error", err)
+		h.responseError(w, err)
 	}
 
-	logger = logger.With(slog.Group(
-		"request_parameters",
-		slog.String("user_id", vars["user_id"]),
-	))
+	defer r.Body.Close()
 
-	userId, err := strconv.ParseUint(vars["user_id"], 10, 64)
-	if err != nil {
-		logger.Error("couldn't parse user_id", "error", err)
-		h.responseError(w, models.ErrWrongUserIdFormat)
+	logger = logger.With(slog.String("request_body", string(bytes)))
+
+	var request RegisterRequest
+
+	if err := json.Unmarshal(bytes, &request); err != nil {
+		logger.Error("couldn't unmarshal request body", "error", err)
+		h.responseError(w, err)
 		return
 	}
 
@@ -64,9 +65,7 @@ func (h *UserHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	defer done()
 
-	user, err := h.userService.User(ctx, service.UserFilter{
-		Id: userId,
-	})
+	user, err := h.userService.Register(ctx, request.UserCredentials.Username, request.UserCredentials.Password)
 	if err != nil {
 		h.responseError(w, err)
 		return
@@ -74,19 +73,18 @@ func (h *UserHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	apiUser := models.NewUserFromModel(user)
 
-	response := &UserResponse{
+	response := RegisterResponse{
 		User: apiUser,
 	}
 
-	responseBytes, err := json.Marshal(response)
-	if err != nil {
+	if bytes, err = json.Marshal(&response); err != nil {
 		logger.Error("couldn't marshal response", "error", err)
 		h.responseError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(responseBytes)
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(bytes)
 	if err != nil {
 		logger.Error("couldn't write response", "error", err)
 		h.responseError(w, err)
