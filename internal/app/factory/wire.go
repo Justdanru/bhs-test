@@ -10,6 +10,12 @@ import (
 
 func StartApp() (*app.App, func(), error) {
 	panic(wire.Build(
+		configSet,
+		loggersSet,
+		repositoriesSet,
+		servicesSet,
+		handlersSet,
+		httpSet,
 		startApp,
 	))
 }

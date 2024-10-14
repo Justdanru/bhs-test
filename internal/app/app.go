@@ -1,19 +1,23 @@
 package app
 
-import "fmt"
+import (
+	"github.com/Justdanru/bhs-test/internal/controller/http/v1/server"
+)
 
 type App struct {
+	HTTPServer *server.HTTPServer
 }
 
-func NewApp() *App {
-	return &App{}
+func NewApp(httpServer *server.HTTPServer) *App {
+	return &App{
+		HTTPServer: httpServer,
+	}
 }
 
 func (a *App) Run() error {
-	fmt.Printf("App started\n")
-	return nil
+	return a.HTTPServer.Run()
 }
 
 func (a *App) Shutdown() {
-	fmt.Printf("App closed\n")
+	a.HTTPServer.Shutdown()
 }
