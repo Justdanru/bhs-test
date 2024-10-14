@@ -11,5 +11,9 @@ var loggersSet = wire.NewSet(
 )
 
 func provideLogger() *slog.Logger {
-	return slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	slog.SetDefault(logger)
+
+	return logger
 }

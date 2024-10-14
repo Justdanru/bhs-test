@@ -34,6 +34,6 @@ func (s *HTTPServer) Run() error {
 
 func (s *HTTPServer) Shutdown() {
 	if err := s.server.Close(); err != nil {
-		s.logger.Error("error closing http server", err)
+		s.logger.Error("closing http server failed", "error", err)
 	}
 }

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"github.com/Justdanru/bhs-test/internal/models"
 	"github.com/Justdanru/bhs-test/internal/usecase/repository"
+	ctxlogger "github.com/Justdanru/bhs-test/pkg/context/logger"
 	"github.com/Masterminds/squirrel"
 	"github.com/lib/pq"
+	"log/slog"
 )
 
 var (
@@ -25,6 +27,20 @@ func NewRepositoryPostgreSQL(sql *sql.DB) *RepositoryPostgreSQL {
 }
 
 func (r *RepositoryPostgreSQL) Get(ctx context.Context, filter repository.GetFilter) (*models.User, error) {
+	logger, err := ctxlogger.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.With(
+		slog.Group("filter",
+			slog.Uint64("id", filter.Id),
+			slog.String("username", filter.Username),
+			slog.Uint64("limit", uint64(filter.Limit)),
+			slog.Uint64("offset", uint64(filter.Offset)),
+		),
+	)
+
 	query := squirrel.Select("id, username, password_hash").
 		From("users").
 		PlaceholderFormat(squirrel.Dollar)
@@ -50,12 +66,14 @@ func (r *RepositoryPostgreSQL) Get(ctx context.Context, filter repository.GetFil
 		username, passwordHash string
 	)
 
-	err := query.RunWith(r.sql).QueryRowContext(ctx).Scan(&id, &username, &passwordHash)
+	err = query.RunWith(r.sql).QueryRowContext(ctx).Scan(&id, &username, &passwordHash)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, repository.ErrUserNotFound
 		}
 
+		logger.Error("sql query execution failed", "error", err)
 		return nil, err
 	}
 
