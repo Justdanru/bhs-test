@@ -8,6 +8,7 @@ import (
 var handlersSet = wire.NewSet(
 	handler.NewErrorsHandler,
 	handler.NewUserHandler,
+	handler.NewCheckUsernameHandler,
 	handler.NewRegisterHandler,
 	handler.NewRootHandler,
 )

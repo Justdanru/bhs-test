@@ -46,19 +46,19 @@ func (r *RepositoryPostgreSQL) Get(ctx context.Context, filter repository.GetFil
 		PlaceholderFormat(squirrel.Dollar)
 
 	if filter.Id != 0 {
-		query.Where(squirrel.Eq{"id": filter.Id})
+		query = query.Where(squirrel.Eq{"id": filter.Id})
 	}
 
 	if filter.Username != "" {
-		query.Where(squirrel.Eq{"username": filter.Username})
+		query = query.Where(squirrel.Eq{"username": filter.Username})
 	}
 
 	if filter.Limit != 0 {
-		query.Limit(uint64(filter.Limit))
+		query = query.Limit(uint64(filter.Limit))
 	}
 
 	if filter.Offset != 0 {
-		query.Offset(uint64(filter.Offset))
+		query = query.Offset(uint64(filter.Offset))
 	}
 
 	var (

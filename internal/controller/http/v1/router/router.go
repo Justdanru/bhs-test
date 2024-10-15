@@ -27,6 +27,8 @@ func NewRouter(
 
 	newMux.HandleFunc("/users/{user_id}", rootHandler.User.Handle).Methods(http.MethodGet)
 
+	newMux.HandleFunc("/check_username", rootHandler.CheckUsername.Handle).Methods(http.MethodPost)
+
 	newMux.HandleFunc("/users", rootHandler.Register.Handle).Methods(http.MethodPost)
 
 	router.mux = newMux
