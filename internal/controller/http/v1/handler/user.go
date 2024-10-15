@@ -65,7 +65,9 @@ func (h *UserHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	defer done()
 
 	user, err := h.userService.User(ctx, service.UserFilter{
-		Id: userId,
+		Id:     userId,
+		Offset: 0,
+		Limit:  1,
 	})
 	if err != nil {
 		h.responseError(w, err)

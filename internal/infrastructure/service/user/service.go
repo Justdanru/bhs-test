@@ -23,6 +23,8 @@ func (s *Service) User(ctx context.Context, filter service.UserFilter) (*models.
 	return s.userRepository.Get(ctx, repository.GetFilter{
 		Id:       filter.Id,
 		Username: filter.Username,
+		Limit:    filter.Limit,
+		Offset:   filter.Offset,
 	})
 }
 
