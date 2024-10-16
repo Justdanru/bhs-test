@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"unicode/utf8"
 )
@@ -67,6 +68,23 @@ func (u *User) SetUsername(username string) error {
 
 func (u *User) SetPasswordHash(passwordHash string) {
 	u.passwordHash = passwordHash
+}
+
+func (u *User) CheckPassword(password string) (bool, error) {
+	if utf8.RuneCountInString(password) < minPasswordLength {
+		return false, ErrPasswordTooShort
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(u.passwordHash), []byte(password))
+	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }
 
 func hashPassword(password string) (string, error) {

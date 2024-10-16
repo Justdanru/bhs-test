@@ -10,9 +10,11 @@ import (
 	"github.com/Justdanru/bhs-test/config"
 	"github.com/Justdanru/bhs-test/internal/app"
 	"github.com/Justdanru/bhs-test/internal/controller/http/v1/handler"
+	"github.com/Justdanru/bhs-test/internal/controller/http/v1/middleware"
 	"github.com/Justdanru/bhs-test/internal/controller/http/v1/router"
 	"github.com/Justdanru/bhs-test/internal/controller/http/v1/server"
 	"github.com/Justdanru/bhs-test/internal/infrastructure/repository/user"
+	"github.com/Justdanru/bhs-test/internal/infrastructure/service/auth"
 	user2 "github.com/Justdanru/bhs-test/internal/infrastructure/service/user"
 )
 
@@ -33,9 +35,14 @@ func StartApp() (*app.App, func(), error) {
 	service := user2.NewService(repositoryPostgreSQL)
 	userHandler := handler.NewUserHandler(errorsHandler, service)
 	checkUsernameHandler := handler.NewCheckUsernameHandler(errorsHandler, service)
-	registerHandler := handler.NewRegisterHandler(errorsHandler, service)
-	rootHandler := handler.NewRootHandler(userHandler, checkUsernameHandler, registerHandler)
-	routerRouter := router.NewRouter(rootHandler)
+	authService := auth.NewService(configConfig)
+	registerHandler := handler.NewRegisterHandler(errorsHandler, service, authService)
+	loginHandler := handler.NewLoginHandler(authService, service, errorsHandler)
+	rootHandler := handler.NewRootHandler(userHandler, checkUsernameHandler, registerHandler, loginHandler)
+	initMiddleware := middleware.NewInitMiddleware()
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+	rootMiddleware := middleware.NewRootMiddleware(initMiddleware, authMiddleware)
+	routerRouter := router.NewRouter(rootHandler, rootMiddleware)
 	logger := provideLogger()
 	httpServer := server.NewHTTPServer(configConfig, routerRouter, logger)
 	appApp, cleanup2, err := startApp(httpServer)

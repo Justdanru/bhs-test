@@ -4,6 +4,7 @@ type (
 	Config struct {
 		HTTP HTTPConfig
 		PG   PostgreSQLConfig
+		Auth AuthConfig
 	}
 
 	HTTPConfig struct {
@@ -17,6 +18,10 @@ type (
 		Host     string
 		Port     string
 		DB       string
+	}
+
+	AuthConfig struct {
+		SecretKey string
 	}
 )
 
@@ -32,6 +37,9 @@ func NewConfig() *Config {
 			Host:     "localhost",
 			Port:     "5432",
 			DB:       "bhs",
+		},
+		Auth: AuthConfig{
+			SecretKey: "default-secret-key",
 		},
 	}
 }

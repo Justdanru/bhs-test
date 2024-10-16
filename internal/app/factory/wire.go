@@ -14,6 +14,7 @@ func StartApp() (*app.App, func(), error) {
 		loggersSet,
 		repositoriesSet,
 		servicesSet,
+		middlewaresSet,
 		handlersSet,
 		httpSet,
 		startApp,

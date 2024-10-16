@@ -10,5 +10,6 @@ var handlersSet = wire.NewSet(
 	handler.NewUserHandler,
 	handler.NewCheckUsernameHandler,
 	handler.NewRegisterHandler,
+	handler.NewLoginHandler,
 	handler.NewRootHandler,
 )

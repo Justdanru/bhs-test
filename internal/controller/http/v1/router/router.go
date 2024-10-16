@@ -2,36 +2,42 @@ package router
 
 import (
 	"github.com/Justdanru/bhs-test/internal/controller/http/v1/handler"
+	"github.com/Justdanru/bhs-test/internal/controller/http/v1/middleware"
 	"github.com/gorilla/mux"
 	"net/http"
 	"sync/atomic"
 )
 
 type Router struct {
-	mux         *mux.Router
-	rootHandler *handler.RootHandler
-	requestId   atomic.Uint64
+	mux            *mux.Router
+	rootHandler    *handler.RootHandler
+	rootMiddleware *middleware.RootMiddleware
+	requestId      atomic.Uint64
 }
 
 func NewRouter(
 	rootHandler *handler.RootHandler,
+	rootMiddleware *middleware.RootMiddleware,
 ) *Router {
 	router := &Router{
-		rootHandler: rootHandler,
-		requestId:   atomic.Uint64{},
+		rootHandler:    rootHandler,
+		rootMiddleware: rootMiddleware,
+		requestId:      atomic.Uint64{},
 	}
 
-	newMux := mux.NewRouter()
+	baseMux := mux.NewRouter()
+	baseMux.Use(rootMiddleware.Init.Handle)
 
-	newMux.Use(router.initMiddleware)
+	baseMux.HandleFunc("/check_username", rootHandler.CheckUsername.Handle).Methods(http.MethodPost)
+	baseMux.HandleFunc("/users", rootHandler.Register.Handle).Methods(http.MethodPost)
+	baseMux.HandleFunc("/login", rootHandler.Login.Handle).Methods(http.MethodPost)
 
-	newMux.HandleFunc("/users/{user_id}", rootHandler.User.Handle).Methods(http.MethodGet)
+	authMux := baseMux.PathPrefix("/").Subrouter()
+	authMux.Use(rootMiddleware.Auth.Handle)
 
-	newMux.HandleFunc("/check_username", rootHandler.CheckUsername.Handle).Methods(http.MethodPost)
+	authMux.HandleFunc("/users/{user_id}", rootHandler.User.Handle).Methods(http.MethodGet)
 
-	newMux.HandleFunc("/users", rootHandler.Register.Handle).Methods(http.MethodPost)
-
-	router.mux = newMux
+	router.mux = baseMux
 
 	return router
 }

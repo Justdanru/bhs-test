@@ -12,34 +12,34 @@ import (
 	"time"
 )
 
-type RegisterHandler struct {
+type LoginHandler struct {
 	*ErrorsHandler
-	userService service.UserService
 	authService service.AuthService
+	userService service.UserService
 }
 
-func NewRegisterHandler(
-	errorsHandler *ErrorsHandler,
-	userService service.UserService,
+func NewLoginHandler(
 	authService service.AuthService,
-) *RegisterHandler {
-	return &RegisterHandler{
+	userService service.UserService,
+	errorsHandler *ErrorsHandler,
+) *LoginHandler {
+	return &LoginHandler{
 		ErrorsHandler: errorsHandler,
-		userService:   userService,
 		authService:   authService,
+		userService:   userService,
 	}
 }
 
-type RegisterRequest struct {
+type LoginRequest struct {
 	UserCredentials *models.UserCredentials `json:"credentials,required"`
 }
 
-type RegisterResponse struct {
-	User *models.User `json:"user,required"`
+type LoginResponse struct {
+	Ok   bool         `json:"ok,required"`
 	Auth *models.Auth `json:"auth,required"`
 }
 
-func (h *RegisterHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *LoginHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	logger, err := ctxlogger.FromContext(r.Context())
 	if err != nil {
 		h.responseError(w, err)
@@ -69,26 +69,31 @@ func (h *RegisterHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	defer done()
 
-	user, err := h.userService.Register(ctx, request.UserCredentials.Username, request.UserCredentials.Password)
+	user, err := h.userService.User(ctx, service.UserFilter{Username: request.UserCredentials.Username})
 	if err != nil {
 		h.responseError(w, err)
 		return
 	}
 
-	apiUser := models.NewUserFromModel(user)
-
-	response := RegisterResponse{
-		User: apiUser,
-	}
-
-	token, err := h.authService.NewToken(ctx, user.Id())
+	ok, err := user.CheckPassword(request.UserCredentials.Password)
 	if err != nil {
+		logger.Error("error comparing password", "error", err)
 		h.responseError(w, err)
 		return
 	}
 
-	response.Auth = &models.Auth{
-		AccessToken: token,
+	var response LoginResponse
+
+	response.Ok = ok
+
+	if ok {
+		token, err := h.authService.NewToken(ctx, user.Id())
+		if err != nil {
+			h.responseError(w, err)
+			return
+		}
+
+		response.Auth = &models.Auth{AccessToken: token}
 	}
 
 	if bytes, err = json.Marshal(&response); err != nil {
@@ -97,13 +102,11 @@ func (h *RegisterHandler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(bytes)
 	if err != nil {
 		logger.Error("couldn't write response", "error", err)
 		h.responseError(w, err)
 		return
 	}
-
-	return
 }
